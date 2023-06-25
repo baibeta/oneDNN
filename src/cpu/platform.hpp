@@ -94,6 +94,13 @@
 #define DNNL_RV64GCV_ONLY(...)
 #endif
 
+#if defined(DNNL_RV64) && defined(DNNL_RISCV_USE_MSA_INTRINSICS)
+#define DNNL_RV64GC_MSA_ONLY(...) __VA_ARGS__
+#else
+#define DNNL_RV64GC_MSA_ONLY(...)
+#endif
+
+
 // Negation of the helper macros above
 #define DNNL_NON_X64_ONLY(...) Z_CONDITIONAL_DO(Z_NOT(DNNL_X64), __VA_ARGS__)
 
