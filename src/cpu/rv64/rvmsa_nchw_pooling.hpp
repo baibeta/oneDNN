@@ -20,26 +20,28 @@
 #include "cpu/cpu_pooling_pd.hpp"
 #include "cpu/primitive_attr_postops.hpp"
 
+#ifdef DNNL_RISCV_USE_MSA_INTRINSICS
+#include "msa.h"
+#warning "Using RV64 with MSA SIMD intrinsics"
+#endif
+
 namespace dnnl {
 namespace impl {
 namespace cpu {
 namespace rv64 {
 
 template <data_type_t d_type>
-struct riscv_nchw_pooling_fwd_t : public primitive_t {
+struct riscv_msa_nchw_pooling_fwd_t : public primitive_t {
     struct pd_t : public cpu_pooling_fwd_pd_t {
         using cpu_pooling_fwd_pd_t::cpu_pooling_fwd_pd_t;
 
-        DECLARE_COMMON_PD_T_("RISCV64GCV", riscv_nchw_pooling_fwd_t)
+        DECLARE_COMMON_PD_T_("RISCV64GC_MSA", riscv_msa_nchw_pooling_fwd_t)
 
         status_t init(engine_t *engine) {
             UNUSED(engine);
 
             const format_tag_t desired_fmt_tag = utils::pick(ndims() - 3,
                     format_tag::ncw, format_tag::nchw, format_tag::ncdhw);
-
-            const bool is_training
-                    = desc_.prop_kind == prop_kind::forward_training;
 
             const bool ok = is_fwd()
                     && utils::one_of(desc()->alg_kind, alg_kind::pooling_max)
@@ -55,17 +57,15 @@ struct riscv_nchw_pooling_fwd_t : public primitive_t {
                     && memory_desc_matches_tag(*dst_md(), desired_fmt_tag)
                     && attr_.set_default_formats(dst_md(0)) == status::success
                     && attr()->post_ops_.len() == 0
-                    && KW() < riscv_nchw_pooling_fwd_t<
-                               d_type>::max_kernel_width;
+                    && KW() < riscv_msa_nchw_pooling_fwd_t<d_type>::max_kernel_width;
 
-	    printf("riscv_nchw ok? = %d \r\n",ok);
             if (!ok) return status::unimplemented;
 
             return status::success;
         }
     };
 
-    riscv_nchw_pooling_fwd_t(const pd_t *apd);
+    riscv_msa_nchw_pooling_fwd_t(const pd_t *apd);
 
     using data_t = typename prec_traits<d_type>::type;
 

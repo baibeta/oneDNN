@@ -17,6 +17,7 @@
 #include "rvv_nchw_pooling.hpp"
 #include <algorithm>
 #include <riscv_vector.h>
+#include "stdio.h"
 
 namespace dnnl {
 namespace impl {
@@ -32,6 +33,7 @@ void MaxPooling(const float *src, float *dst, const dim_t batch,
         const dim_t padFront, const dim_t padTop, const dim_t padLeft) {
     float arr_flt_min
             [riscv_nchw_pooling_fwd_t<data_type::f32>::max_kernel_width];
+    printf("hello from rvv pooling. \n");
     for (int i = 0;
             i < riscv_nchw_pooling_fwd_t<data_type::f32>::max_kernel_width; i++)
         arr_flt_min[i] = __FLT_MIN__;

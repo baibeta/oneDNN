@@ -222,6 +222,8 @@ template <data_type_t d_type>
 status_t nchw_pooling_fwd_t<d_type>::execute_forward(
         const exec_ctx_t &ctx) const {
 
+    printf("Hello from nchw_pooling_fwd_t \r\n");
+
     auto alg = pd()->desc()->alg_kind;
 
     auto src = CTX_IN_MEM(const data_t *, DNNL_ARG_SRC);

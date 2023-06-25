@@ -47,6 +47,8 @@ template <data_type_t data_type, data_type_t acc_type>
 status_t ref_pooling_fwd_t<data_type, acc_type>::execute_forward(
         const exec_ctx_t &ctx) const {
 
+    printf("Hello from ref_pooling_fwd_t \r\n");
+
     status_t status = status::success;
     auto src = CTX_IN_MEM(const data_t *, DNNL_ARG_SRC);
     auto dst = CTX_OUT_CLEAN_MEM(data_t *, DNNL_ARG_DST, status);
