@@ -42,6 +42,27 @@ using namespace dnnl;
 using tag = memory::format_tag;
 using dt = memory::data_type;
 
+void print_data(const std::vector<float>& data, const memory::dims& dims) {
+    const int N = dims[0];
+    const int C = dims[1];
+    const int H = dims[2];
+    const int W = dims[3];
+
+    for (int n = 0; n < N; ++n) {
+        for (int c = 0; c < C; ++c) {
+            std::cout << "Batch " << n << ", Channel " << c << ":" << std::endl;
+            for (int h = 0; h < H; ++h) {
+                for (int w = 0; w < W; ++w) {
+                    const int idx = n * C * H * W + c * H * W + h * W + w;
+                    std::cout << data[idx] << " ";
+                }
+                std::cout << std::endl;
+            }
+            std::cout << std::endl;
+        }
+    }
+}
+
 void pooling_example(dnnl::engine::kind engine_kind) {
 
     // Create execution dnnl::engine.
@@ -51,20 +72,20 @@ void pooling_example(dnnl::engine::kind engine_kind) {
     dnnl::stream engine_stream(engine);
 
     // Tensor dimensions.
-    const memory::dim N = 3, // batch size
+    const memory::dim N = 1, // batch size
             IC = 3, // input channels
-            IH = 27, // input tensor height
-            IW = 27, // input tensor width
-            KH = 11, // kernel height
-            KW = 11, // kernel width
+            IH = 10, // input tensor height
+            IW = 10, // input tensor width
+            KH = 2, // kernel height
+            KW = 8, // kernel width
             PH_L = 0, // height padding: left
             PH_R = 0, // height padding: right
             PW_L = 0, // width padding: left
             PW_R = 0, // width padding: right
-            SH = 4, // height-wise stride
-            SW = 4, // width-wise stride
-            DH = 1, // height-wise dilation
-            DW = 1; // width-wise dilation
+            SH = 1, // height-wise stride
+            SW = 1, // width-wise stride
+            DH = 0, // height-wise dilation
+            DW = 0; // width-wise dilation
 
     const memory::dim OH = (IH - ((KH - 1) * DH + KH) + PH_L + PH_R) / SH + 1;
     const memory::dim OW = (IW - ((KW - 1) * DW + KW) + PW_L + PW_R) / SW + 1;
@@ -127,6 +148,15 @@ void pooling_example(dnnl::engine::kind engine_kind) {
 
     // Wait for the computation to finalize.
     engine_stream.wait();
+
+    // Read data from memory object's handle and print the values.
+    std::cout << "Input values:" << std::endl;
+    read_from_dnnl_memory(src_data.data(), src_mem);
+    print_data(src_data, src_dims);
+
+    std::cout << "Output values:" << std::endl;
+    read_from_dnnl_memory(dst_data.data(), dst_mem);
+    print_data(dst_data, dst_dims);
 
     // Read data from memory object's handle.
     read_from_dnnl_memory(dst_data.data(), dst_mem);

@@ -49,7 +49,7 @@ struct riscv_msa_nchw_pooling_fwd_t : public primitive_t {
                     && utils::everyone_is(
                             d_type, src_md()->data_type, dst_md()->data_type)
                     && platform::has_data_type_support(d_type)
-                    && !has_zero_dim_memory()
+                    && !has_zero_dim_memory() && !is_dilated()
                     && attr()->has_default_values(
                             primitive_attr_t::skip_mask_t::post_ops, d_type)
                     && set_default_params() == status::success
@@ -57,6 +57,7 @@ struct riscv_msa_nchw_pooling_fwd_t : public primitive_t {
                     && memory_desc_matches_tag(*dst_md(), desired_fmt_tag)
                     && attr_.set_default_formats(dst_md(0)) == status::success
                     && attr()->post_ops_.len() == 0
+		    && KW() % 4 == 0
                     && KW() < riscv_msa_nchw_pooling_fwd_t<d_type>::max_kernel_width;
 
             if (!ok) return status::unimplemented;
