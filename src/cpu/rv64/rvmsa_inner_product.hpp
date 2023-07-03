@@ -57,6 +57,7 @@ struct riscv_msa_inner_product_fwd_t : public primitive_t {
                     && utils::one_of(dst_type, f32, src_type)
                     && IMPLICATION(
                             with_bias(), utils::one_of(bia_type, f32, src_type))
+		    && set_default_params(true) == status::success
                     && attr()->has_default_values(
                             smask_t::post_ops | smask_t::sum_dt)
                     && attr()->post_ops_.check_sum_consistency(dst_type,

@@ -52,8 +52,6 @@ status_t riscv_msa_inner_product_fwd_t::execute_forward(const exec_ctx_t &ctx) c
     const dim_t KH = pd()->KH();
     const dim_t KW = pd()->KW();
 
-    auto sum_dt = pd()->attr()->post_ops_.get_sum_dt(dst_d.data_type());
-
     // mini batch
     for (dim_t mb = 0; mb < MB; ++mb) {
         // output channel
