@@ -52,6 +52,14 @@ status_t riscv_msa_inner_product_fwd_t::execute_forward(const exec_ctx_t &ctx) c
     const dim_t KH = pd()->KH();
     const dim_t KW = pd()->KW();
 
+    const format_tag_t desired_fmt_tag = utils::pick(ndims - 3,
+        format_tag::ncw, format_tag::nchw, format_tag::ncdhw);
+    bool unit_stride_src = memory_desc_matches_tag(*pd()->src_md(), desired_fmt_tag);
+
+    const format_tag_t desired_fmt_tag_weights = utils::pick(ndims - 3,
+        format_tag::oiw, format_tag::oihw, format_tag::oidhw);
+    bool unit_stride_wei = memory_desc_matches_tag(*pd()->weights_md(0), desired_fmt_tag_weights);
+
     // mini batch
     for (dim_t mb = 0; mb < MB; ++mb) {
         // output channel
@@ -70,33 +78,31 @@ status_t riscv_msa_inner_product_fwd_t::execute_forward(const exec_ctx_t &ctx) c
                             const auto wei_off = ref_ip_utils::get_weights_off(
                                         weights_d, ndims, oc, ic, kd, kh, kw);
                             if (KW < 4 || KW - kw < 4) {
-                            //    printf("src_off = %d \r\n",src_off);
-                            //    printf("wei_off = %d \r\n",wei_off);
                                 const float s = ((float *)src)[src_off];
                                 const float w = ((float *)weights)[wei_off];
                                 d += s * w;
                                 kw++;
                             } else {
                                 v4f32 v_s = (v4f32)__msa_ld_w((float *)src + src_off, 0);
-                                v_s = (v4f32)__msa_insert_w((v4i32)v_s, 1,
-                                    *((int *) src + ref_ip_utils::get_data_off(src_d, ndims, mb, ic, kd, kh, kw+1)));
-                                v_s = (v4f32)__msa_insert_w((v4i32)v_s, 2,
-                                    *((int *) src + ref_ip_utils::get_data_off(src_d, ndims, mb, ic, kd, kh, kw+2)));
-                                v_s = (v4f32)__msa_insert_w((v4i32)v_s, 3,
-                                    *((int *) src + ref_ip_utils::get_data_off(src_d, ndims, mb, ic, kd, kh, kw+3)));
-
                                 v4f32 v_w = (v4f32)__msa_ld_w((float *)weights + wei_off, 0);
-                                v_w = (v4f32)__msa_insert_w((v4i32)v_w, 1,
-                                    *((int *) weights + ref_ip_utils::get_weights_off(weights_d, ndims, oc, ic, kd, kh, kw + 1)));
-                                v_w = (v4f32)__msa_insert_w((v4i32)v_w, 2,
-                                    *((int *) weights + ref_ip_utils::get_weights_off(weights_d, ndims, oc, ic, kd, kh, kw + 2)));
-                                v_w = (v4f32)__msa_insert_w((v4i32)v_w, 3,
-                                    *((int *) weights + ref_ip_utils::get_weights_off(weights_d, ndims, oc, ic, kd, kh, kw + 3)));
 
+                                if (!unit_stride_src) {
+                                    v_s = (v4f32)__msa_insert_w((v4i32)v_s, 1,
+                                        *((int *) src + ref_ip_utils::get_data_off(src_d, ndims, mb, ic, kd, kh, kw+1)));
+                                    v_s = (v4f32)__msa_insert_w((v4i32)v_s, 2,
+                                        *((int *) src + ref_ip_utils::get_data_off(src_d, ndims, mb, ic, kd, kh, kw+2)));
+                                    v_s = (v4f32)__msa_insert_w((v4i32)v_s, 3,
+                                        *((int *) src + ref_ip_utils::get_data_off(src_d, ndims, mb, ic, kd, kh, kw+3)));
+                                }
+                                if (!unit_stride_wei) {
+                                    v_w = (v4f32)__msa_insert_w((v4i32)v_w, 1,
+                                        *((int *) weights + ref_ip_utils::get_weights_off(weights_d, ndims, oc, ic, kd, kh, kw + 1)));
+                                    v_w = (v4f32)__msa_insert_w((v4i32)v_w, 2,
+                                        *((int *) weights + ref_ip_utils::get_weights_off(weights_d, ndims, oc, ic, kd, kh, kw + 2)));
+                                    v_w = (v4f32)__msa_insert_w((v4i32)v_w, 3,
+                                        *((int *) weights + ref_ip_utils::get_weights_off(weights_d, ndims, oc, ic, kd, kh, kw + 3)));
+                                }
                                 v4f32 v_d = __msa_fmul_w(v_s, v_w);
-
-                                // printf("input = [%f %f %f %f] \n",v_s[0], v_s[1], v_s[2], v_s[3]);
-                                // printf("weights = [%f %f %f %f] \n",v_w[0], v_w[1], v_w[2], v_w[3]);
 
                                 d += v_d[0] + v_d[1] + v_d[2] + v_d[3];
                                 kw += 4;
@@ -119,7 +125,6 @@ status_t riscv_msa_inner_product_fwd_t::execute_forward(const exec_ctx_t &ctx) c
     }
 
     return status::success;
-
 }
 
 
